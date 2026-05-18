@@ -13,6 +13,7 @@ members = [
     "tango-gamedb",
     "tango-pvp",
     "tango-replaytool",
+    "tango-replayviewer",
     "tango-signaling",
     "tango-signaling-server",
 ]
