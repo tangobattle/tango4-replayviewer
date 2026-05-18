@@ -6155,7 +6155,54 @@ dependencies = [
 ]
 
 [[package]]
-name = "tango-replayviewer"
+name = "tango-signaling"
+version = "0.1.0"
+dependencies = [
+ "datachannel-wrapper",
+ "futures",
+ "futures-util",
+ "http",
+ "log",
+ "prost",
+ "prost-build",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-tungstenite 0.16.1",
+ "url",
+ "urlencoding",
+]
+
+[[package]]
+name = "tango-signaling-server"
+version = "4.0.51"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "byteorder",
+ "env_logger",
+ "envconfig",
+ "futures-util",
+ "hmac 0.12.1",
+ "hyper",
+ "hyper-tungstenite",
+ "jwt",
+ "log",
+ "openssl-sys",
+ "opentok-server",
+ "rand 0.8.5",
+ "reqwest",
+ "routerify",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tango-signaling",
+ "tokio",
+ "tungstenite 0.17.3",
+ "url",
+]
+
+[[package]]
+name = "tango4-replayviewer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -6207,53 +6254,6 @@ dependencies = [
  "wgpu",
  "winit",
  "zip",
-]
-
-[[package]]
-name = "tango-signaling"
-version = "0.1.0"
-dependencies = [
- "datachannel-wrapper",
- "futures",
- "futures-util",
- "http",
- "log",
- "prost",
- "prost-build",
- "thiserror 1.0.69",
- "tokio",
- "tokio-tungstenite 0.16.1",
- "url",
- "urlencoding",
-]
-
-[[package]]
-name = "tango-signaling-server"
-version = "4.0.51"
-dependencies = [
- "anyhow",
- "async-trait",
- "byteorder",
- "env_logger",
- "envconfig",
- "futures-util",
- "hmac 0.12.1",
- "hyper",
- "hyper-tungstenite",
- "jwt",
- "log",
- "openssl-sys",
- "opentok-server",
- "rand 0.8.5",
- "reqwest",
- "routerify",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tango-signaling",
- "tokio",
- "tungstenite 0.17.3",
- "url",
 ]
 
 [[package]]

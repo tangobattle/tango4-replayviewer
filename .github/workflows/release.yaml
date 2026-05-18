@@ -1,0 +1,146 @@
+name: release
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+
+  release-win32-x64:
+    runs-on: ubuntu-22.04
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - run: git fetch --tags --force
+
+      - uses: pat-s/always-upload-cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: win32-x64-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - run: |
+          sudo apt-get autoremove -y clang-13 clang-14
+
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 wget libarchive-tools zip clang-15
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Horrible hack...
+      - run: |
+          sudo ln -s /usr/x86_64-w64-mingw32/lib/libshell32.a /usr/x86_64-w64-mingw32/lib/libShell32.a
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-gnu
+
+      - run: |
+          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-gcc x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-win32 60
+          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-gcc x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix 90
+          sudo update-alternatives --quiet --config x86_64-w64-mingw32-gcc
+          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-g++ x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-win32 60
+          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-g++ x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix 90
+          sudo update-alternatives --quiet --config x86_64-w64-mingw32-g++
+
+      - run: |
+          BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr/x86_64-w64-mingw32/" ./win/build.sh
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          files: |
+            ./dist/tango4-replayviewer-x86_64-windows.zip
+
+  release-mac-universal:
+    runs-on: macos-14
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - run: git fetch --tags --force
+
+      - uses: pat-s/always-upload-cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: darwin-universal-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
+
+      - run: ./macos/build.sh
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          files: |
+            ./dist/tango4-replayviewer-macos.zip
+
+  release-linux-x86_64:
+    runs-on: ubuntu-22.04 # Ubuntu 22.04 is used for higher glibc compatibility across users
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - run: git fetch --tags --force
+
+      - uses: pat-s/always-upload-cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: linux-x86_64-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+
+      - run: |
+          sudo apt-get update -y
+          sudo apt-get upgrade -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y alsa build-essential clang cmake curl git libnss3 librust-atk-dev librust-gdk-pixbuf-dev librust-gdk-sys-dev librust-pango-dev libsdl2-dev pkgconf sudo wget zip
+
+      - run: ./linux/build.sh
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          files: ./dist/tango4-replayviewer-x86_64-linux.zip
