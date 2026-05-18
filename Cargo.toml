@@ -7,7 +7,6 @@ members = [
     "input-helper",
     "mgba",
     "mmpx",
-    "tango",
     "tango-dataview",
     "tango-filesync",
     "tango-gamedb",
