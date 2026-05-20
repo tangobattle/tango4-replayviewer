@@ -1,6 +1,7 @@
 replays = Replays
 
 replays-all-replays = All Replays
+replays-change-folder = Change Folder
 
 replays-export = Export
 replays-export-multi = Export+

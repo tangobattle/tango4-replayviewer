@@ -212,13 +212,17 @@ fn resolve_cached<'a>(
 
 pub fn show(
     ui: &mut egui::Ui,
-    config: &config::Config,
+    config: &mut config::Config,
     shared_root_state: &mut gui::SharedRootState,
     state: &mut State,
 ) {
-    let language = &config.language;
-    let patches_path = &config.patches_path;
-    let replays_path = &config.replays_path;
+    // clone so we can mutate config.replays_path later in this function (e.g. the change-folder button)
+    let language = config.language.clone();
+    let patches_path = config.patches_path.clone();
+    let replays_path = config.replays_path.clone();
+    let language = &language;
+    let patches_path = &patches_path;
+    let replays_path = &replays_path;
 
     let roms_scanner = shared_root_state.scanners.roms.clone();
     let patches_scanner = shared_root_state.scanners.patches.clone();
@@ -305,6 +309,23 @@ pub fn show(
                             }
                         }
                     });
+
+                let change_folder_label = format!(
+                    "📁 {}",
+                    i18n::LOCALES.lookup(language, "replays-change-folder").unwrap()
+                );
+                if ui.button(change_folder_label).clicked() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_title("Select replays folder")
+                        .set_directory(replays_path)
+                        .pick_folder()
+                    {
+                        config.replays_path = path;
+                        state.selection = None;
+                        state.folder_filter = None;
+                        state.rescan(ui.ctx(), &config.replays_path);
+                    }
+                }
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let has_selection = cached_for_selection.is_some();

@@ -71,9 +71,19 @@ fn main() -> Result<(), anyhow::Error> {
         .init();
 
     let data_dir = default_data_dir();
-    let replays_path = args.replays.unwrap_or_else(|| data_dir.join("replays"));
+    let default_replays_path = data_dir.join("replays");
     let roms_path = args.roms.unwrap_or_else(|| data_dir.join("roms"));
     let patches_path = args.patches.unwrap_or_else(|| data_dir.join("patches"));
+
+    let replays_path = if let Some(path) = args.replays {
+        path
+    } else {
+        rfd::FileDialog::new()
+            .set_title("Select replays folder")
+            .set_directory(&default_replays_path)
+            .pick_folder()
+            .unwrap_or(default_replays_path)
+    };
 
     let _ = std::fs::create_dir_all(&replays_path);
     let _ = std::fs::create_dir_all(&roms_path);
