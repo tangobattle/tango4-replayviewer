@@ -1,14 +1,46 @@
 name: release
 
 on:
-  release:
-    types:
-      - created
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
+  create-release:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # Resolve the pushed tag back to its annotated message (if any).
+      # Lightweight tags have no message; the release body falls back to
+      # empty in that case, matching what `gh release create` would do.
+      - id: tag-msg
+        run: |
+          git fetch --tags --force
+          msg=$(git for-each-ref --format='%(contents)' refs/tags/${{ github.ref_name }})
+          {
+            echo 'msg<<TANGO_TAG_MSG_EOF'
+            echo "$msg"
+            echo 'TANGO_TAG_MSG_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ steps.tag-msg.outputs.msg }}
+          # Semver prereleases carry a `-` after the version number
+          # (e.g. v1.0.0-alpha.0); a plain `v1.2.3` never contains
+          # `-`, so tag-name search is a clean check.
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
   release-win32-x64:
-    runs-on: ubuntu-22.04
+    runs-on: windows-2022
+    needs: create-release
     env:
       CMAKE_POLICY_VERSION_MINIMUM: 3.5
 
@@ -24,49 +56,39 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            core/target
-          key: win32-x64-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - run: |
-          sudo apt-get autoremove -y clang-13 clang-14
-
-      - run: |
-          sudo apt-get update
-          sudo apt-get install -y mingw-w64 wget libarchive-tools zip clang-15
+            target
+          key: win32-x64-msvc-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Horrible hack...
-      - run: |
-          sudo ln -s /usr/x86_64-w64-mingw32/lib/libshell32.a /usr/x86_64-w64-mingw32/lib/libShell32.a
+      # Source MSVC vcvars (cl.exe / link.exe / nmake.exe / Windows SDK)
+      # into the rest of the workflow so cmake + cc-rs all pick up the
+      # same MSVC toolset.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          targets: x86_64-pc-windows-gnu
+          targets: x86_64-pc-windows-msvc
 
-      - run: |
-          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-gcc x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-win32 60
-          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-gcc x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix 90
-          sudo update-alternatives --quiet --config x86_64-w64-mingw32-gcc
-          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-g++ x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-win32 60
-          sudo update-alternatives --quiet --install /usr/bin/x86_64-w64-mingw32-g++ x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix 90
-          sudo update-alternatives --quiet --config x86_64-w64-mingw32-g++
-
-      - run: |
-          BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr/x86_64-w64-mingw32/" ./win/build.sh
+      - name: Build
+        shell: bash
+        run: ./win/build.sh
 
       - uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          tag_name: ${{ github.ref_name }}
           files: |
             ./dist/tango4-replayviewer-x86_64-windows.zip
 
   release-mac-universal:
     runs-on: macos-14
+    needs: create-release
     env:
       CMAKE_POLICY_VERSION_MINIMUM: 3.5
 
@@ -99,12 +121,13 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          tag_name: ${{ github.ref_name }}
           files: |
             ./dist/tango4-replayviewer-macos.zip
 
   release-linux-x86_64:
     runs-on: ubuntu-22.04 # Ubuntu 22.04 is used for higher glibc compatibility across users
+    needs: create-release
     env:
       CMAKE_POLICY_VERSION_MINIMUM: 3.5
 
@@ -142,5 +165,5 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          tag_name: ${{ github.ref_name }}
           files: ./dist/tango4-replayviewer-x86_64-linux.zip
