@@ -47,5 +47,7 @@ curl -L -o ffmpeg.exe "https://github.com/eugeneware/ffmpeg-static/releases/down
 popd
 
 mkdir -p dist
-(cd tango_win_workdir && zip -r ../dist/tango4-replayviewer-x86_64-windows.zip .)
+# Git Bash on Windows doesn't ship `zip`; use the preinstalled 7-Zip
+# instead. `-tzip` forces the zip format (default would be 7z).
+(cd tango_win_workdir && 7z a -tzip ../dist/tango4-replayviewer-x86_64-windows.zip .)
 rm -rf tango_win_workdir
